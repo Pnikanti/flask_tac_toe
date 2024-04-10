@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <script>
+        window.addEventListener("load", () => {
+            console.log("Game started! :)");
+            
+            let cells = document.getElementsByClassName("cell");
+            cells = Array.from(cells);
+
+            cells.map((cell, index) => {
+                cell.textContent = index;
+                cell.id = index;
+                cell.addEventListener("click", () => {
+                    cell.style.backgroundColor = "grey";
+                    let url = window.location + "api?id=" + index;
+                    console.log(url);
+
+                    fetch(url)
+                        .then(response => response.text())
+                        .then((data) => {
+                            console.log(data);
+                    });
+               
+                });
+            });
+        });
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 2px;
+            margin: 20px auto;
+        }
+        .cell {
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="board">
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+    </div>
+</body>
+</html>
