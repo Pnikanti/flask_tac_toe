@@ -1,0 +1,6 @@
+curl 'http://localhost:5000/api/new'
+curl 'http://localhost:5000/api/register?gameId=0&playerId=matti'
+curl 'http://localhost:5000/api/register?gameId=0&playerId=jorma'
+curl 'http://localhost:5000/api/tick?gameId=0&tileId=0&playerId=matti'
+curl 'http://localhost:5000/api/tick?gameId=0&tileId=1&playerId=jorma'
+curl 'http://localhost:5000/api/get?gameId=0'

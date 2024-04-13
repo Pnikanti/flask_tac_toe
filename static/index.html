@@ -5,18 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe</title>
     <script>
+        let cells = null;
+        let input_game_id = null;
+        let input_player = null;
+
+        let game_id = 0;
+        let player_id = "";
+        
         window.addEventListener("load", () => {
             console.log("Game started! :)");
-            
-            let cells = document.getElementsByClassName("cell");
-            cells = Array.from(cells);
 
+            input_game_id = document.getElementById("inputGameId");
+            input_player_name = document.getElementById("inputPlayerName");
+            synchronize_button = document.getElementById("synchronizeButton");
+
+            input_game_id.addEventListener("input", () => {
+                game_id = input_game_id.value;
+            });
+
+            input_player_name.addEventListener("input", () => {
+                player_id = input_player_name.value;
+            });
+
+            synchronize_button.addEventListener("click", () => {
+                let url = window.location + "api/register?gameId?=" + game_id + "&playerId=" + player_id;
+                fetch(url)
+                    .then(response => response.text())
+                    .then((data) => {
+                        synchronize_button.textContent = "✅";
+                        setTimeout(() => {
+                            synchronize_button.textContent = "🔄";
+                        }, "5000")
+                        data = JSON.parse(data);
+                        console.log(data);
+                });
+
+                url = window.location + "api/get?gameId=" + game_id;
+
+                fetch(url)
+                    .then(response => response.text())
+                    .then((data) => {
+                        data = JSON.parse(data);
+                        console.log(data);
+                        cells.map((cell, index) => {
+                            cell_activated = data.state.tiles[index];
+                            if (cell_activated) {
+                                cell.style.backgroundColor = "grey";
+                            }
+                            else {
+                                cell.style.backgroundColor = "white";
+                            }
+                        });
+                });
+
+            });
+
+            cells = document.getElementsByClassName("cell");
+            cells = Array.from(cells);
+        
             cells.map((cell, index) => {
                 cell.textContent = index;
                 cell.id = index;
                 cell.addEventListener("click", () => {
+                    cell.disabled = false;
                     cell.style.backgroundColor = "grey";
-                    let url = window.location + "api?id=" + index;
+                    let url = window.location + "api/tick?gameId=" + game_id + "&tileId=" + index + "&playerId=" + player_id;
                     console.log(url);
 
                     fetch(url)
@@ -24,22 +77,50 @@
                         .then((data) => {
                             console.log(data);
                     });
-               
+                    });
                 });
-            });
         });
     </script>
     <style>
         body {
             font-family: Arial, sans-serif;
         }
-        .board {
+
+        input {
+            min-height: 2rem;
+            font-size: 18px;
+        }
+
+        #board {
             display: grid;
+            justify-content: center;
             grid-template-columns: repeat(3, 100px);
             grid-template-rows: repeat(3, 100px);
             gap: 2px;
             margin: 20px auto;
         }
+
+        #boardSettings {
+            margin: 20px auto;
+            width: 20vw;
+        }
+        
+        #fetchButton {
+            flex-grow: 0.5;
+        }
+
+        .flexRow {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+
+        .flexColumn {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
         .cell {
             border: 1px solid #ccc;
             display: flex;
@@ -48,13 +129,14 @@
             font-size: 24px;
             cursor: pointer;
         }
+
         .cell:hover {
             background-color: #f0f0f0;
         }
     </style>
 </head>
 <body>
-    <div class="board">
+    <div id="board">
         <div class="cell"></div>
         <div class="cell"></div>
         <div class="cell"></div>
@@ -64,6 +146,17 @@
         <div class="cell"></div>
         <div class="cell"></div>
         <div class="cell"></div>
+    </div>
+    <div id="boardSettings" class="flexRow">
+        <div class="flexColumn">
+            <label for="inputGameId">Game ID</label>
+            <input type="text" id="inputGameId" name="name"/>
+            <label for="inputPlayerName">Player Name</label>
+            <input type="text" id="inputPlayerName" name="name"/>
+        </div>
+        <div class="flexColumn">
+            <button id="synchronizeButton">🔄</button>
+        </div>
     </div>
 </body>
 </html>
