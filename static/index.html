@@ -5,19 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe</title>
     <script>
+        let debug = true;
         let cells = null;
+        let game_state = null;
         let input_game_id = null;
         let input_player = null;
 
-        let game_id = 0;
-        let player_id = "";
+        let game_id = null;
+        let player_id = null;
         
-        window.addEventListener("load", () => {
+        let init = () => {
             console.log("Game started! :)");
 
             input_game_id = document.getElementById("inputGameId");
             input_player_name = document.getElementById("inputPlayerName");
             synchronize_button = document.getElementById("synchronizeButton");
+            
+            game_id = input_game_id.value;
+            player_id = input_player_name.value;
 
             input_game_id.addEventListener("input", () => {
                 game_id = input_game_id.value;
@@ -28,58 +33,161 @@
             });
 
             synchronize_button.addEventListener("click", () => {
-                let url = window.location + "api/register?gameId?=" + game_id + "&playerId=" + player_id;
-                fetch(url)
-                    .then(response => response.text())
-                    .then((data) => {
-                        synchronize_button.textContent = "✅";
-                        setTimeout(() => {
-                            synchronize_button.textContent = "🔄";
-                        }, "5000")
-                        data = JSON.parse(data);
-                        console.log(data);
-                });
-
-                url = window.location + "api/get?gameId=" + game_id;
-
-                fetch(url)
-                    .then(response => response.text())
-                    .then((data) => {
-                        data = JSON.parse(data);
-                        console.log(data);
-                        cells.map((cell, index) => {
-                            cell_activated = data.state.tiles[index];
-                            if (cell_activated) {
-                                cell.style.backgroundColor = "grey";
-                            }
-                            else {
-                                cell.style.backgroundColor = "white";
-                            }
-                        });
-                });
-
+                synchronize_button.textContent = "🔄";
+                synchronize().then((response) => {
+                    synchronize_button.textContent = "✅";
+                    console.log("Synchronize donetski!");
+                    setTimeout(() => {
+                        synchronize_button.textContent = "➡️";
+                    }, 5000)
+                })
             });
+        }
+        
+        window.addEventListener("load", () => {
+            init();
+        });
 
+        let poll = () => {
+            update_state().then((response) => {
+                console.log("🔄");
+                setTimeout(() => { poll(); }, 2000);
+            });
+        }
+
+        let init_cells = () => {
             cells = document.getElementsByClassName("cell");
             cells = Array.from(cells);
-        
+
             cells.map((cell, index) => {
+                if (game_state.tiles[index] === null) {
+                    cell.disabled = false;
+                }
+                else if (game_state.players.includes(player_id)) {
+                    if (game_state.tiles[index] === player_id){
+                        cell.disabled = true;
+                        cell.style.backgroundColor = "green";
+                    }
+                    else {
+                        cell.disabled = true;
+                        cell.style.backgroundColor = "red";
+                    }
+                }
+                else {
+                    cell.disabled = true;
+                    if (game_state.tiles[index] === game_state.players[0]) {
+                        cell.style.backgroundColor = "yellow";
+                    }
+                    else if (game_state.tiles[index] === game_state.players[1]) {
+                        cell.style.backgroundColor = "blue";
+                    }
+                }
+
                 cell.textContent = index;
                 cell.id = index;
-                cell.addEventListener("click", () => {
-                    cell.disabled = false;
-                    cell.style.backgroundColor = "grey";
-                    let url = window.location + "api/tick?gameId=" + game_id + "&tileId=" + index + "&playerId=" + player_id;
-                    console.log(url);
 
-                    fetch(url)
-                        .then(response => response.text())
-                        .then((data) => {
-                            console.log(data);
-                    });
-                    });
+                cell.addEventListener("click", async () => {
+                    if (cell.disabled) {
+                        return;
+                    }
+
+                    cell.disabled = true;
+                    cell.style.backgroundColor = "green";
+
+                    let response = await fetch(`${window.location}api/tick?gameId=${game_id}&tileId=${index}&playerId=${player_id}`);
                 });
-        });
+            });
+        }
+
+            let update_state = async () => {
+                let game_data = await get_game();
+                game_state = game_data.state;
+                
+                cells.map((cell, index) => {
+                    if (game_state.tiles[index] === null) {
+                        cell.disabled = false;
+                    }
+                    else if (game_state.players.includes(player_id)) {
+                        if (game_state.tiles[index] === player_id){
+                            cell.disabled = true;
+                            cell.style.backgroundColor = "green";
+                        }
+                        else {
+                            cell.disabled = true;
+                            cell.style.backgroundColor = "red";
+                        }
+                    }
+                    else {
+                        cell.disabled = true;
+                        if (game_state.tiles[index] === game_state.players[0]) {
+                            cell.style.backgroundColor = "yellow";
+                        }
+                        else if (game_state.tiles[index] === game_state.players[1]) {
+                            cell.style.backgroundColor = "blue";
+                        }
+                    }
+                });
+        }
+
+        let synchronize = async () => {
+            if (game_id === null || player_id === null) {
+                console.log("Game ID and Player ID must be specified!");
+                return;
+            } 
+            
+            let game_data = await get_game();
+
+            if (!game_data.success) {
+                await new_game();
+                game_data = await get_game();
+            }
+
+            if (!game_data.state.players.includes(player_id) && game_data.state.players.length < 2) {
+                let register_response = await register_player();
+                console.log("Joined game!");
+                game_data = await get_game();
+            }
+            else if (game_data.state.players.includes(player_id)) {
+                console.log("Joined game!");
+            }
+            else {
+                console.log("Joining as spectator!");
+            }
+
+            game_state = game_data.state;
+            init_cells();
+            poll();
+        }
+
+        let get_game = async () => {
+            let response = await fetch(`${window.location}api/get?gameId=${game_id}`);
+            response = await response.text();
+            response = JSON.parse(response);
+            if (debug) {
+                console.log(response);
+            }
+            return response;
+        }
+
+        let new_game = async () => {
+            let response = await fetch(`${window.location}api/new`);
+            response = await response.text();
+            response = JSON.parse(response);
+            if (debug) {
+                console.log(response);
+            }
+            return response;
+        }
+
+        let register_player = async () => {
+            let response = await fetch(`${window.location}api/register?gameId=${game_id}&playerId=${player_id}`);
+            response = await response.text();
+            response = JSON.parse(response);
+            if (debug) {
+                console.log(response);
+            }
+            return response;
+        }
     </script>
     <style>
         body {
@@ -105,8 +213,10 @@
             width: 20vw;
         }
         
-        #fetchButton {
-            flex-grow: 0.5;
+        #synchronizeButton {
+            flex-grow: 0.65;
+            font-size: 48px;
+            margin-left: 20px;
         }
 
         .flexRow {
@@ -119,6 +229,10 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+        }
+
+        .justifyEnd {
+            justify-content: end;
         }
 
         .cell {
@@ -154,8 +268,8 @@
             <label for="inputPlayerName">Player Name</label>
             <input type="text" id="inputPlayerName" name="name"/>
         </div>
-        <div class="flexColumn">
-            <button id="synchronizeButton">🔄</button>
+        <div class="flexColumn justifyEnd">
+            <button id="synchronizeButton">➡️</button>
         </div>
     </div>
 </body>

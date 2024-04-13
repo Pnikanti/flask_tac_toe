@@ -1,7 +1,15 @@
 #!/bin/bash
+source_location=""
 
-python -m venv venv 2>/dev/null
+python3 -m venv venv 2>/dev/null
 
-source venv/Scripts/activate
-pip install -r requirements.txt
+if [[ "$OSTYPE" == "win32" ]]; then
+    source_location="venv/Scripts/activate"
+else
+    source_location="venv/bin/activate"
+fi
+
+source "$source_location"
+python -m pip install -r requirements.txt
+echo "Starting server 🔥"
 flask run

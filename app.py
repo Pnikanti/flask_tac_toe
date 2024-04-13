@@ -2,11 +2,13 @@ from flask import Flask, send_from_directory, request, jsonify
 from numbers import Number
 
 app = Flask(__name__)
-games = []
+games = [None]
 
 class Game:
     def __init__(self, id):
-        self.tiles = [None for i in range(9)]
+        self.grid_size = 3
+        self.marks_required = 3
+        self.tiles = [None for i in range(self.grid_size * self.grid_size)]
         self.players = []
         self.id = id
         self.turn = None
@@ -19,44 +21,35 @@ def main():
     
 @app.route("/api/tick")
 def tick():
-    game_id = request.args.get("gameId")
-    tile_id = request.args.get("tileId")
-    player_id = request.args.get("playerId")
-    
-    if not game_id:
+    if not (game_id := request.args.get("gameId")):
         return jsonify({
             "statusText":  "Game ID must be specified!",
             "success": False
         })
     
-    if not tile_id:
+    if not (tile_id := request.args.get("tileId")):
         return jsonify({
             "statusText":  "Tile ID must be specified!",
             "success": False
         })
-    
-    if not player_id:
+
+    if not (player_id := request.args.get("playerId")):
         return jsonify({
             "statusText":  "Player ID must be specified!",
             "success": False
         })
-    
-    tile_id = int(tile_id)
 
     return tick_game(game_id, player_id, tile_id)
 
 @app.route("/api/register")
 def register():
-    game_id = request.args.get("gameId")
-    player_id = request.args.get("playerId")
-    
-    if not game_id:
+    if not (game_id := request.args.get("gameId")):
         return jsonify({
             "statusText":  "Game ID must be specified!",
             "success": False
         })
     
-    if not player_id:
+    if not (player_id := request.args.get("playerId")):
         return jsonify({
             "statusText":  "Player ID must be specified!",
             "success": False
@@ -68,7 +61,7 @@ def register():
 def get():
     game_id = request.args.get("gameId")
 
-    if not game_id:
+    if game_id == None:
         return jsonify({
             "statusText":  "Game ID must be specified!",
             "success": False
@@ -112,10 +105,54 @@ def tick_game(game_id, player_id, tile_id):
             "success": False
         })
     
-    game.tiles[tile_id] = True
+    game.tiles[tile_id] = player_id
+
+    # NOTE: Bruteforce verification
+
+    # NOTE: Horizontal
+    for i in range(0, len(game.tiles), game.grid_size):
+        tiles = game.tiles[i:i+game.grid_size]
+        if len(tiles) == game.marks_required and all(tiles[0] == tile and tile != None for tile in tiles):
+            print(f"We got a winner! Horizontal :) -- {tiles[0]}")
+
+    # TODO: Verify that this works for grids bigger than 3x3
+    # NOTE: Vertical
+    for i in range(0, game.grid_size, 1):
+        tiles = []
+
+        for j in range(i, len(game.tiles), game.grid_size):
+            tiles.append(game.tiles[j])
+
+        if len(tiles) == game.marks_required and all(tiles[0] == tile and tile != None for tile in tiles):
+            print(f"We got a winner! Vertical :) -- {tiles[0]}")
+
+    print("DIAGONAL #1")
+    # NOTE: Diagonal
+    for i in range(0, game.grid_size, 1):
+        tiles = []
+        k = 0
+
+        for j in range(i, len(game.tiles), game.grid_size):
+            index = j - k
+            tiles.append(game.tiles[index])
+            k += 1
+
+        if len(tiles) == game.marks_required and all(tiles[0] == tile and tile != None for tile in tiles):
+            print(f"We got a winner! Diagonal #1 :) -- {tiles[0]}")
+
+    print("DIAGONAL #2")
+    # NOTE: Diagonal #2
+    for i in range(0, game.grid_size, 1):
+        tiles = []
+        
+        for j in range(i, len(game.tiles), game.grid_size + 1):
+            tiles.append(game.tiles[j])
+
+        if len(tiles) == game.marks_required and all(tiles[0] == tile and tile != None for tile in tiles):
+            print(f"We got a winner! Diagonal #2 :) -- {tiles[0]}")   
 
     return jsonify({
-        "statusText":  "Game tick!",
+        "statusText": "Game tick!",
         "success": True
     })
     
